@@ -1362,7 +1362,7 @@ AC_SUBST(LOCAL_DEFS)
 #AC_SUBST(ALLOCA_SOURCE)
 #AC_SUBST(ALLOCA_OBJECT)
 
-AC_CONFIG_FILES([Makefile builtins/Makefile lib/readline/Makefile \
+AC_CONFIG_FILES([Makefile builtins/Makefile lib/readline/Makefile:lib/readline.Makefile.in \
 		 lib/glob/Makefile lib/intl/Makefile \
 		 lib/malloc/Makefile lib/sh/Makefile lib/termcap/Makefile \
 		 lib/tilde/Makefile doc/Makefile support/Makefile \

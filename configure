@@ -23287,7 +23287,7 @@ fi
 #AC_SUBST(ALLOCA_SOURCE)
 #AC_SUBST(ALLOCA_OBJECT)
 
-ac_config_files="$ac_config_files Makefile builtins/Makefile lib/readline/Makefile lib/glob/Makefile lib/intl/Makefile lib/malloc/Makefile lib/sh/Makefile lib/termcap/Makefile lib/tilde/Makefile doc/Makefile support/Makefile po/Makefile.in examples/loadables/Makefile examples/loadables/Makefile.inc examples/loadables/Makefile.sample examples/loadables/perl/Makefile support/bash.pc support/bashbug.sh"
+ac_config_files="$ac_config_files Makefile builtins/Makefile lib/readline/Makefile:lib/readline.Makefile.in lib/glob/Makefile lib/intl/Makefile lib/malloc/Makefile lib/sh/Makefile lib/termcap/Makefile lib/tilde/Makefile doc/Makefile support/Makefile po/Makefile.in examples/loadables/Makefile examples/loadables/Makefile.inc examples/loadables/Makefile.sample examples/loadables/perl/Makefile support/bash.pc support/bashbug.sh"
 
 
 ac_config_commands="$ac_config_commands stamp-h"
@@ -24020,7 +24020,7 @@ do
     "po-directories") CONFIG_COMMANDS="$CONFIG_COMMANDS po-directories" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "builtins/Makefile") CONFIG_FILES="$CONFIG_FILES builtins/Makefile" ;;
-    "lib/readline/Makefile") CONFIG_FILES="$CONFIG_FILES lib/readline/Makefile" ;;
+    "lib/readline/Makefile") CONFIG_FILES="$CONFIG_FILES lib/readline/Makefile:lib/readline.Makefile.in" ;;
     "lib/glob/Makefile") CONFIG_FILES="$CONFIG_FILES lib/glob/Makefile" ;;
     "lib/intl/Makefile") CONFIG_FILES="$CONFIG_FILES lib/intl/Makefile" ;;
     "lib/malloc/Makefile") CONFIG_FILES="$CONFIG_FILES lib/malloc/Makefile" ;;

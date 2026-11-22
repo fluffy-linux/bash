@@ -347,10 +347,8 @@ lib/malloc/stub.c	f
 lib/malloc/i386-alloca.s	f
 lib/malloc/x386-alloca.s	f
 lib/readline/COPYING	f
-lib/readline/Makefile.in	f
-lib/readline/ChangeLog	f
+lib/readline.Makefile.in	f
 lib/readline/README	f
-lib/readline/STANDALONE f
 lib/readline/readline.c	f
 lib/readline/vi_mode.c	f
 lib/readline/emacs_keymap.c	f
@@ -413,7 +411,6 @@ lib/readline/rlprivate.h	f
 lib/readline/colors.h	f
 lib/readline/parse-colors.h	f
 lib/readline/xmalloc.h	f
-lib/readline/doc/Makefile	f
 lib/readline/doc/version.texi	f
 lib/readline/doc/rlman.texi	f
 lib/readline/doc/rltech.texi	f
@@ -423,7 +420,6 @@ lib/readline/doc/history.texi	f
 lib/readline/doc/hstech.texi	f
 lib/readline/doc/hsuser.texi	f
 lib/readline/doc/fdl.texi	f
-lib/readline/examples/Makefile	f
 lib/readline/examples/excallback.c	f
 lib/readline/examples/fileman.c	f
 lib/readline/examples/manexamp.c	f
