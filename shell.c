@@ -69,6 +69,7 @@ extern int get_tty_state (void);
 #include "input.h"
 #include "execute_cmd.h"
 #include "findcmd.h"
+#include "pathexp.h"
 
 #if defined (USING_BASH_MALLOC) && defined (DEBUG) && !defined (DISABLE_MALLOC_WRAPPERS)
 #  include <malloc/shmalloc.h>
@@ -1117,7 +1118,14 @@ execute_env_file (char *env_file)
 static void
 execute_profile_file (void)
 {
-  maybe_execute_file (SYS_PROFILE, 1);
+  char **profiles;
+  int i;
+
+  profiles = shell_glob_path (SYS_PROFILE);
+  for (i = 0; profiles && profiles[i]; i++)
+    maybe_execute_file (profiles[i], 1);
+  if (profiles)
+    strvec_dispose (profiles);
 
   if (act_like_sh)	/* sh */
     maybe_execute_file ("~/.profile", 1);
