@@ -1,4 +1,4 @@
-#!/bin/sh -
+#!/sw/bash/bin/bash -
 #
 # bashbug - create a bug report and mail it to the bug address
 #
