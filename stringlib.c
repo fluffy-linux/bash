@@ -198,7 +198,7 @@ strcreplace (const char *string, int c, const char *text, int flags)
 	  if (len)
 	    {
 	      ind = r - ret;
-	      if (do_glob && (glob_pattern_p (text) || strchr (text, '\\')))
+	      if (do_glob && (glob_pattern_p (text, 1) || strchr (text, '\\')))
 		{
 		  t = quote_globbing_chars (text);
 		  tlen = strlen (t);

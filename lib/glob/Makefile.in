@@ -67,16 +67,16 @@ CCFLAGS = $(PROFILE_FLAGS) $(DEFS) $(LOCAL_DEFS) ${INCLUDES} $(CPPFLAGS) \
 LIBRARY_NAME = libglob.a
 
 # The C code source files for this library.
-CSOURCES = $(srcdir)/glob.c $(srcdir)/strmatch.c $(srcdir)/smatch.c \
+CSOURCES = $(srcdir)/strmatch.c $(srcdir)/smatch.c \
 	   $(srcdir)/gmisc.c \
 	   $(srcdir)/xmbsrtowcs.c
 
-LOOP_FILES = $(srcdir)/glob_loop.c $(srcdir)/gm_loop.c $(srcdir)/sm_loop.c
+LOOP_FILES = $(srcdir)/gm_loop.c $(srcdir)/sm_loop.c
 
 # The header files for this library.
 HSOURCES = $(srcdir)/strmatch.h
 
-OBJECTS = glob.o strmatch.o smatch.o xmbsrtowcs.o gmisc.o
+OBJECTS = strmatch.o smatch.o xmbsrtowcs.o gmisc.o
 
 # The texinfo files which document this library.
 DOCSOURCE = doc/glob.texi
@@ -146,14 +146,6 @@ strmatch.o: strmatch.h
 strmatch.o: $(BUILD_DIR)/config.h
 strmatch.o: $(BASHINCDIR)/stdc.h
 
-glob.o: $(BUILD_DIR)/config.h
-glob.o: $(topdir)/shell.h $(BUILD_DIR)/pathnames.h
-glob.o: $(topdir)/bashtypes.h $(BASHINCDIR)/ansi_stdlib.h $(topdir)/bashansi.h
-glob.o: $(BASHINCDIR)/posixstat.h $(BASHINCDIR)/memalloc.h
-glob.o: strmatch.h glob.h
-glob.o: $(BASHINCDIR)/shmbutil.h
-glob.o: $(topdir)/xmalloc.h
-
 gmisc.o: $(BUILD_DIR)/config.h
 gmisc.o: $(topdir)/bashtypes.h $(BASHINCDIR)/ansi_stdlib.h $(topdir)/bashansi.h
 gmisc.o: $(BASHINCDIR)/shmbutil.h
@@ -163,13 +155,11 @@ xmbsrtowcs.o: ${topdir}/bashansi.h ${BASHINCDIR}/ansi_stdlib.h
 xmbsrtowcs.o: ${BASHINCDIR}/shmbutil.h
 
 # Rules for deficient makes, like SunOS and Solaris
-glob.o: glob.c
 gmisc.o: gmisc.c
 strmatch.o: strmatch.c
 smatch.o: smatch.c
 xmbsrtowcs.o: xmbsrtowcs.c
 
 # dependencies for C files that include other C files
-glob.o: glob_loop.c
 gmisc.o: gm_loop.c
 smatch.o: sm_loop.c

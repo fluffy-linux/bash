@@ -143,6 +143,25 @@ mksyntax mksignames make_cmd.o mailcheck.o mksignames.o mksyntax.dSYM
 mksyntax.dSYM mksignames.o mailcheck.o make_cmd.o mksignames mksyntax
 aa ab ac
 ac ab aa
+C: quoted class name matches
+C: trailing backslash matches
+C.UTF-8: quoted class name matches
+C.UTF-8: trailing backslash matches
+wide: quoted class name matches
+wide: trailing backslash matches
+abc
+abd
+abc
+abd
+bcd
+.hidden
+abc
+abd
+bcd
+bcd
+abd
+abc
+no match: status 1
 argv[1] = <a>
 argv[2] = <abc>
 argv[3] = <abd>
@@ -157,7 +176,7 @@ argv[2] = <abc>
 argv[3] = <abd>
 argv[4] = <abe>
 tmp/l1 tmp/l2 tmp/*4 tmp/l3
-./glob.tests: line 67: no match: tmp/*4
+./glob.tests: line 68: no match: tmp/*4
 argv[1] = <bdir/>
 argv[1] = <*>
 argv[1] = <a*>

@@ -1,0 +1,50 @@
+#   This program is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or
+#   (at your option) any later version.
+#
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License
+#   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Pathname expansion goes through glibc's glob(3).  What bash still does
+# itself: pattern matching dequotes character class names, and compgen -G
+# globs for completion.
+
+# A character class name may be quoted; the matcher removes the
+# backslashes, as a byte string and, when the string has a multibyte
+# character, as a wide string.
+for loc in C C.UTF-8
+do
+	export LC_ALL=$loc
+	case a in [[:\al\pha:]]) echo "$loc: quoted class name matches" ;; *) echo "$loc: quoted class name does not match" ;; esac
+	case a in [[:alpha\:]]) echo "$loc: trailing backslash matches" ;; *) echo "$loc: trailing backslash does not match" ;; esac
+done
+export LC_ALL=C.UTF-8
+case éa in ?[[:\al\pha:]]) echo "wide: quoted class name matches" ;; *) echo "wide: quoted class name does not match" ;; esac
+case éa in ?[[:alpha\:]]) echo "wide: trailing backslash matches" ;; *) echo "wide: trailing backslash does not match" ;; esac
+export LC_ALL=C
+
+TESTDIR=$TMPDIR/glob12-$$
+mkdir $TESTDIR
+builtin cd $TESTDIR || { echo $0: cannot cd to $TESTDIR >&2 ; exit 1; }
+touch abc abd bcd .hidden
+
+# compgen -G globs without quote removal, through the same flags.
+compgen -G 'a*'
+compgen -G '*'
+shopt -s dotglob
+compgen -G '*'
+shopt -u dotglob
+GLOBSORT=-name
+compgen -G '*'
+unset GLOBSORT
+compgen -G 'z*'
+echo "no match: status $?"
+
+builtin cd /
+rm -rf $TESTDIR

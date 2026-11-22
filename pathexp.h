@@ -24,6 +24,7 @@
 #define GLOB_FAILED(glist)	(glist) == (char **)&glob_error_return
 
 extern int noglob_dot_filenames;
+extern int glob_ignore_case;
 extern char *glob_error_return;
 
 /* Flag values for quote_string_for_globbing */

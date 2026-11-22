@@ -35,6 +35,7 @@
 #include "shell.h"
 #include "pathexp.h"
 #include "flags.h"
+#include "trap.h"
 
 #include "shmbutil.h"
 #include "bashintl.h"
@@ -46,11 +47,17 @@ static int glob_name_is_acceptable (const char *);
 static void ignore_globbed_names (char **, sh_ignore_func_t *);
 static char *split_ignorespec (char *, int *);
 static void sh_sortglob (char **);
+static int glob_sorttype = SORT_NONE;
 	       
 #include <glob/glob.h>
 
 /* Control whether * matches .files in globbing. */
 int glob_dot_filenames;
+
+int noglob_dot_filenames = 1;
+int glob_ignore_case = 0;
+int glob_always_skip_dot_and_dotdot = 1;
+char *glob_error_return;
 
 /* Control whether the extended globbing features are enabled. */
 int extended_glob = EXTGLOB_DEFAULT;
@@ -436,32 +443,77 @@ quote_globbing_chars (const char *string)
   return temp;
 }
 
-/* Call the glob library to do globbing on PATHNAME, honoring all the shell
+static int
+bash_glob_flags (void)
+{
+  int gflags;
+
+  gflags = GLOB_DOTDOT;
+  if (glob_dot_filenames)
+    gflags |= GLOB_PERIOD;
+  if (glob_always_skip_dot_and_dotdot)
+    gflags |= GLOB_SKIPDOTS;
+  if (glob_ignore_case)
+    gflags |= GLOB_CASEFOLD;
+  if (extended_glob)
+    gflags |= GLOB_EXTMATCH;
+  if (glob_star)
+    gflags |= GLOB_GLOBSTAR;
+  return gflags;
+}
+
+/* Call the C library glob() to do globbing on PATHNAME, honoring all the shell
    variables that control globbing. */
 char **
 shell_glob_filename (const char *pathname, int qflags)
 {
   char *temp, **results;
-  int gflags, quoted_pattern;
+  glob_t g;
+  int gflags, r;
 
   noglob_dot_filenames = glob_dot_filenames == 0;
 
   temp = quote_string_for_globbing (pathname, QGLOB_FILENAME|qflags);
-  gflags = glob_star ? GX_GLOBSTAR : 0;
-  results = glob_filename (temp, gflags);
+  QUIT;
+  gflags = bash_glob_flags ();
+  if (glob_sorttype != SORT_NONE && glob_sorttype != SORT_NAME)
+    gflags |= GLOB_NOSORT;
+  memset (&g, 0, sizeof (g));
+  r = glob (temp, gflags, NULL, &g);
   free (temp);
 
-  if (results && ((GLOB_FAILED (results)) == 0))
+  if (interrupt_state || terminating_signal)
     {
+      globfree (&g);
+      QUIT;
+    }
+  run_pending_traps ();
+
+  if (r == 0)
+    {
+      results = g.gl_pathv;
       if (should_ignore_glob_matches ())
 	ignore_glob_matches (results);
       if (results && results[0])
-        sh_sortglob (results);
+	{
+	  if (glob_sorttype != SORT_NONE && glob_sorttype != SORT_NAME)
+	    sh_sortglob (results);
+	}
       else
 	{
 	  FREE (results);
 	  results = (char **)&glob_error_return;
 	}
+    }
+  else if (r == GLOB_NOMATCH)
+    {
+      globfree (&g);
+      results = (char **)&glob_error_return;
+    }
+  else
+    {
+      globfree (&g);
+      results = (char **)NULL;
     }
 
   return (results);
@@ -471,21 +523,34 @@ shell_glob_filename (const char *pathname, int qflags)
 char **
 noquote_glob_filename (char *pathname)
 {
-  char **results;
-  int gflags;
+  glob_t g;
+  int gflags, r;
 
   noglob_dot_filenames = glob_dot_filenames == 0;
-  gflags = glob_star ? GX_GLOBSTAR : 0;
+  QUIT;
+  gflags = bash_glob_flags ();
+  if (glob_sorttype != SORT_NONE && glob_sorttype != SORT_NAME)
+    gflags |= GLOB_NOSORT;
+  memset (&g, 0, sizeof (g));
+  r = glob (pathname, gflags, NULL, &g);
 
-  results = glob_filename (pathname, gflags);
+  if (interrupt_state || terminating_signal)
+    {
+      globfree (&g);
+      QUIT;
+    }
+  run_pending_traps ();
 
-  if (results && GLOB_FAILED (results))
-    results = (char **)NULL;
+  if (r != 0)
+    {
+      globfree (&g);
+      return ((char **)NULL);
+    }
 
-  if (results && results[0])
-    sh_sortglob (results);
+  if (g.gl_pathv && g.gl_pathv[0] && glob_sorttype != SORT_NONE && glob_sorttype != SORT_NAME)
+    sh_sortglob (g.gl_pathv);
 
-  return (results);
+  return (g.gl_pathv);
 }
 #endif
 
@@ -682,7 +747,6 @@ setup_ignore_patterns (struct ignorevar *ivp)
 /* Functions to handle sorting glob results in different ways depending on
    the value of the GLOBSORT variable. */
 
-static int glob_sorttype = SORT_NONE;
 
 static STRING_INT_ALIST sorttypes[] = {
   { "name",	SORT_NAME },

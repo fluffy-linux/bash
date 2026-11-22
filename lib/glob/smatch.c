@@ -321,6 +321,25 @@ is_cclass (int c, const char *name)
 #define PATSCAN			glob_patscan
 #define STRCOMPARE		strcompare
 #define EXTMATCH		extmatch
+void
+udequote_pathname (unsigned char *pathname)
+{
+  int i, j;
+
+  for (i = j = 0; pathname && pathname[i]; )
+    {
+      if (pathname[i] == '\\')
+	i++;
+
+      pathname[j++] = pathname[i++];
+
+      if (pathname[i - 1] == 0)
+	break;
+    }
+  if (pathname)
+    pathname[j] = '\0';
+}
+
 #define DEQUOTE_PATHNAME	udequote_pathname
 #define STRUCT			smat_struct
 #define STRCHR(S, C)		strchr((S), (C))
@@ -566,6 +585,25 @@ posix_cclass_only (char *pattern)
 #define PATSCAN			glob_patscan_wc
 #define STRCOMPARE		wscompare
 #define EXTMATCH		extmatch_wc
+void
+wcdequote_pathname (wchar_t *wpathname)
+{
+  int i, j;
+
+  for (i = j = 0; wpathname && wpathname[i]; )
+    {
+      if (wpathname[i] == L'\\')
+	i++;
+
+      wpathname[j++] = wpathname[i++];
+
+      if (wpathname[i - 1] == L'\0')
+	break;
+    }
+  if (wpathname)
+    wpathname[j] = L'\0';
+}
+
 #define DEQUOTE_PATHNAME	wcdequote_pathname
 #define STRUCT			wcsmat_struct
 #define STRCHR(S, C)		wcschr((S), (C))

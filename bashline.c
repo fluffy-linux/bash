@@ -3995,7 +3995,7 @@ bash_complete_command_internal (int what_to_do)
 static int
 completion_glob_pattern (const char *string)
 {
-  return (glob_pattern_p (string) == 1);
+  return (glob_pattern_p (string, 1) == 1);
 }
 
 static char *globtext;
