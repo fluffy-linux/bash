@@ -2012,6 +2012,7 @@ command_word_completion_function (const char *hint_text, int state)
   static char *dequoted_hint = (char *)NULL;
   static char *directory_part = (char *)NULL;
   static char **glob_matches = (char **)NULL;
+  static char **path_dirs = (char **)NULL;
   static int path_index, istate, igncase;
   static size_t hint_len;
   static int mapping_over, local_index, searching_path, hint_is_dir;
@@ -2048,6 +2049,12 @@ command_word_completion_function (const char *hint_text, int state)
 	{
 	  free (glob_matches);
 	  glob_matches = (char **)NULL;
+	}
+
+      if (path_dirs)
+	{
+	  strvec_dispose (path_dirs);
+	  path_dirs = (char **)NULL;
 	}
 
       if (directory_part)
@@ -2137,6 +2144,8 @@ command_word_completion_function (const char *hint_text, int state)
       orig_found_quote = rl_completion_found_quote;
 
       path = path_value ("PATH", 0);
+      if (path)
+	path_dirs = shell_glob_path (path);
       path_index = dot_in_path = 0;
 
       /* Initialize the variables for each type of command word. */
@@ -2303,25 +2312,10 @@ globword:
 
       /* Get the next directory from the path.  If there is none, then we
 	 are all done. */
-      if (path == 0 || path[path_index] == 0 ||
-	  (current_path = extract_colon_unit (path, &path_index)) == 0)
+      if (path_dirs == 0 || (current_path = path_dirs[path_index++]) == 0)
 	return ((char *)NULL);
 
       searching_path = 1;
-      if (*current_path == 0)
-	{
-	  free (current_path);
-	  current_path = savestring (".");
-	}
-
-      if (*current_path == '~')
-	{
-	  char *t;
-
-	  t = bash_tilde_expand (current_path, 0);
-	  free (current_path);
-	  current_path = t;
-	}
 
       if (current_path[0] == '.' && current_path[1] == '\0')
 	dot_in_path = 1;
@@ -2356,7 +2350,6 @@ globword:
 	}
       else
 	fnhint = filename_hint;
-      free (current_path);		/* XXX */
     }
 
  inner:

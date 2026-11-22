@@ -296,3 +296,28 @@ argv[7] = <man>
 argv[1] = <*>
 argv[1] = <man/man1/bash.1>
 argv[1] = <man/man1/bash.1>
+z_first/bin/myprog
+z_first/bin/myprog
+m_wild/pkg_a/bin/myprog
+m_wild/pkg_b/bin/myprog
+a_last/bin/myprog
+ok tilde 1
+ok tilde 2
+fluffytilde_prog
+fluffytilde_wild
+m_wild/pkg_a/bin/myprog
+m_wild/pkg_a/bin/myprog
+m_wild/pkg_a/bin/myprog
+m_wild/pkg_b/bin/myprog
+many/1/bin/myprog
+many/10/bin/myprog
+many/11/bin/myprog
+many/12/bin/myprog
+many/2/bin/myprog
+many/3/bin/myprog
+many/4/bin/myprog
+many/5/bin/myprog
+many/6/bin/myprog
+many/7/bin/myprog
+many/8/bin/myprog
+many/9/bin/myprog

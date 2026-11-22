@@ -554,6 +554,146 @@ noquote_glob_filename (char *pathname)
 }
 #endif
 
+/* Search lists (PATH, SYS_PROFILE) follow glibc's GLOB_PATHS rule, which
+   execvp and ld.so share: split at every ':', an empty element is ".", a
+   component that is exactly "*" names every package of a prefix, and
+   everything else is literal.  Bash adds what it has always done when
+   searching PATH outside POSIX mode: an element starting with '~' is
+   tilde-expanded first.  */
+
+/* PATH_LIST with every element that starts with '~' tilde-expanded, or
+   NULL if nothing changed.  */
+static char *
+shell_tilde_expand_path_list (const char *path_list)
+{
+  const char *seg, *colon;
+  size_t cap, len, seg_len, add;
+  char *buf, *s, *t;
+
+  if (posixly_correct != 0 || path_list == 0 || strchr (path_list, '~') == 0)
+    return ((char *)NULL);
+
+  cap = strlen (path_list) + 2;
+  buf = (char *)xmalloc (cap);
+  len = 0;
+  for (seg = path_list; ; seg = colon + 1)
+    {
+      colon = strchr (seg, ':');
+      seg_len = colon ? (size_t)(colon - seg) : strlen (seg);
+      t = (char *)NULL;
+      if (seg_len > 0 && *seg == '~')
+	{
+	  s = substring (seg, 0, seg_len);
+	  t = bash_tilde_expand (s, 0);
+	  free (s);
+	}
+      add = t ? strlen (t) : seg_len;
+      if (len + add + 2 > cap)
+	{
+	  cap = (len + add + 2) * 2;
+	  buf = (char *)xrealloc (buf, cap);
+	}
+      memcpy (buf + len, t ? t : seg, add);
+      len += add;
+      FREE (t);
+      if (colon == 0)
+	break;
+      buf[len++] = ':';
+    }
+  buf[len] = '\0';
+  return (buf);
+}
+
+static char **
+shell_run_path_glob (const char *pattern)
+{
+  glob_t g;
+  int r;
+
+  QUIT;
+  memset (&g, 0, sizeof (g));
+  r = glob (pattern, GLOB_PATHS, NULL, &g);
+
+  if (interrupt_state || terminating_signal)
+    {
+      globfree (&g);
+      QUIT;
+    }
+  run_pending_traps ();
+
+  if (r != 0)
+    {
+      globfree (&g);
+      return ((char **)NULL);
+    }
+  return (g.gl_pathv);
+}
+
+/* The existing entries of the search list PATH_LIST, in search order:
+   directories for PATH, files for a list like SYS_PROFILE.  */
+char **
+shell_glob_path (const char *path_list)
+{
+  char *tlist;
+  char **r;
+
+  tlist = shell_tilde_expand_path_list (path_list);
+  r = shell_run_path_glob (tlist ? tlist : (path_list ? path_list : ""));
+  FREE (tlist);
+  return (r);
+}
+
+/* The existing files called NAME in the search list PATH_LIST, in exactly
+   the order execvp tries them.  */
+char **
+shell_path_candidates (const char *path_list, const char *name)
+{
+  char *tlist, *pat;
+  const char *list;
+  char **r;
+
+  tlist = shell_tilde_expand_path_list (path_list);
+  list = tlist ? tlist : path_list;
+  pat = (char *)xmalloc (strlen (list) + strlen (name) + 4);
+  sprintf (pat, "{%s}/%s", list, name);
+  r = shell_run_path_glob (pat);
+  free (pat);
+  FREE (tlist);
+  return (r);
+}
+
+/* Does the search list PATH_LIST have an element that names the current
+   directory (DOTINFOP is "." as stat saw it)?  Bash records that so that
+   a hashed command found after "." is checked again when the current
+   directory changes; reporting it for an element after the match only
+   costs an extra check.  */
+int
+shell_path_has_dot (const char *path_list, struct stat *dotinfop)
+{
+  const char *seg, *colon;
+  char *s;
+  int r;
+
+  if (path_list == 0)
+    return 0;
+  for (seg = path_list; ; seg = colon + 1)
+    {
+      colon = strchr (seg, ':');
+      if (colon == seg || *seg == '\0')
+	return 1;
+      if (*seg == '.')
+	{
+	  s = colon ? substring (seg, 0, colon - seg) : savestring (seg);
+	  r = same_file (".", s, dotinfop, (struct stat *)NULL);
+	  free (s);
+	  if (r)
+	    return 1;
+	}
+      if (colon == 0)
+	return 0;
+    }
+}
+
 /* Stuff for GLOBIGNORE. */
 
 static struct ignorevar globignore =

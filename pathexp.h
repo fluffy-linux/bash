@@ -73,6 +73,10 @@ extern char *quote_globbing_chars (const char *);
 extern char **shell_glob_filename (const char *, int);
 
 extern char **noquote_glob_filename (char *);
+extern char **shell_glob_path (const char *);
+extern char **shell_path_candidates (const char *, const char *);
+struct stat;
+extern int shell_path_has_dot (const char *, struct stat *);
 
 /* Filename completion ignore.  Used to implement the "fignore" facility of
    tcsh, GLOBIGNORE (like ksh-93 FIGNORE), and EXECIGNORE.

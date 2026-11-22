@@ -55,10 +55,9 @@ extern int errno;
 static char *_find_user_command_internal (const char *, int);
 static char *find_user_command_internal (const char *, int);
 static char *find_user_command_in_path (const char *, char *, int, int *);
-static char *find_in_path_element (const char *, char *, int, size_t, struct stat *, int *);
+static char *find_in_path_element (const char *, char *, int, size_t, struct stat *, int *, int);
 static char *find_absolute_program (const char *, int);
 
-static char *get_next_path_element (char *, int *);
 
 /* The file name which we would try to execute, except that it isn't
    possible to execute it.  This is the first file that matches the
@@ -314,29 +313,6 @@ find_user_command_internal (const char *name, int flags)
 #endif
 }
 
-/* Return the next element from PATH_LIST, a colon separated list of
-   paths.  PATH_INDEX_POINTER is the address of an index into PATH_LIST;
-   the index is modified by this function.
-   Return the next element of PATH_LIST or NULL if there are no more. */
-static char *
-get_next_path_element (char *path_list, int *path_index_pointer)
-{
-  char *path;
-
-  path = extract_colon_unit (path_list, path_index_pointer);
-
-  if (path == 0)
-    return (path);
-
-  if (*path == '\0')
-    {
-      free (path);
-      path = savestring (".");
-    }
-
-  return (path);
-}
-
 /* Look for PATHNAME in $PATH.  Returns either the hashed command
    corresponding to PATHNAME or the first instance of PATHNAME found
    in $PATH.  If (FLAGS&CMDSRCH_HASH) is non-zero, insert the instance of
@@ -439,7 +415,7 @@ user_command_matches (const char *name, int flags, int state)
   register int i;
   int  path_index;
   size_t name_len;
-  char *path_list, *path_element, *match;
+  char *path_list, *match;
   struct stat dotinfo;
   static char **match_list = NULL;
   static size_t match_list_size = 0;
@@ -478,29 +454,32 @@ user_command_matches (const char *name, int flags, int state)
 	  path_index = 0;
 	}
 
-      while (path_list && path_list[path_index])
+      if (path_list && *path_list)
 	{
-	  path_element = get_next_path_element (path_list, &path_index);
-
-	  if (path_element == 0)
-	    break;
-
-	  match = find_in_path_element (name, path_element, flags, name_len, &dotinfo, (int *)0);
-	  free (path_element);
-
-	  if (match == 0)
-	    continue;
-
-	  if (match_index + 1 == match_list_size)
+	  /* Every existing PATH candidate, in execvp's order (GLOB_PATHS).  */
+	  char **cands = shell_path_candidates (path_list, name);
+	  if (shell_path_has_dot (path_list, &dotinfo))
+	    dot_found_in_search = 1;
+	  for (path_index = 0; cands && cands[path_index]; path_index++)
 	    {
-	      match_list_size += 10;
-	      match_list = strvec_resize (match_list, (match_list_size + 1));
+	      QUIT;
+	      /* The candidate is <element>/NAME.  */
+	      cands[path_index][strlen (cands[path_index]) - name_len - 1] = '\0';
+	      match = find_in_path_element (name, cands[path_index], flags, name_len, &dotinfo, (int *)0, 0);
+	      if (match == 0)
+		continue;
+	      if (match_index + 1 == match_list_size)
+		{
+		  match_list_size += 10;
+		  match_list = strvec_resize (match_list, (match_list_size + 1));
+		}
+	      match_list[match_index++] = match;
+	      match_list[match_index] = (char *)NULL;
+	      FREE (file_to_lose_on);
+	      file_to_lose_on = (char *)NULL;
 	    }
-
-	  match_list[match_index++] = match;
-	  match_list[match_index] = (char *)NULL;
-	  FREE (file_to_lose_on);
-	  file_to_lose_on = (char *)NULL;
+	  if (cands)
+	    strvec_dispose (cands);
 	}
 
       /* We haven't returned any strings yet. */
@@ -536,12 +515,12 @@ find_absolute_program (const char *name, int flags)
 }
 
 static char *
-find_in_path_element (const char *name, char *path, int flags, size_t name_len, struct stat *dotinfop, int *rflagsp)
+find_in_path_element (const char *name, char *path, int flags, size_t name_len, struct stat *dotinfop, int *rflagsp, int do_tilde)
 {
   int status;
   char *full_path, *xpath;
 
-  xpath = (posixly_correct == 0 && *path == '~') ? bash_tilde_expand (path, 0) : path;
+  xpath = (do_tilde && posixly_correct == 0 && *path == '~') ? bash_tilde_expand (path, 0) : path;
 
   /* Remember the location of "." in the path, in all its forms
      (as long as they begin with a `.', e.g. `./.') */
@@ -622,7 +601,7 @@ find_in_path_element (const char *name, char *path, int flags, size_t name_len, 
 static char *
 find_user_command_in_path (const char *name, char *path_list, int flags, int *rflagsp)
 {
-  char *full_path, *path;
+  char *full_path, **cands;
   int path_index, rflags;
   size_t name_len;
   struct stat dotinfo;
@@ -647,21 +626,21 @@ find_user_command_in_path (const char *name, char *path_list, int flags, int *rf
   name_len = strlen (name);
   if (stat (".", &dotinfo) < 0)
     dotinfo.st_dev = dotinfo.st_ino = 0;
-  path_index = 0;
 
-  while (path_list[path_index])
+  /* Every existing PATH candidate, in execvp's order (GLOB_PATHS).  */
+  cands = shell_path_candidates (path_list, name);
+  if (shell_path_has_dot (path_list, &dotinfo))
+    dot_found_in_search = 1;
+  for (path_index = 0; cands && cands[path_index]; path_index++)
     {
       /* Allow the user to interrupt out of a lengthy path search. */
       QUIT;
 
-      path = get_next_path_element (path_list, &path_index);
-      if (path == 0)
-	break;
+      /* The candidate is <element>/NAME.  */
+      cands[path_index][strlen (cands[path_index]) - name_len - 1] = '\0';
 
-      /* Side effects: sets dot_found_in_search, possibly sets
-	 file_to_lose_on. */
-      full_path = find_in_path_element (name, path, flags, name_len, &dotinfo, &rflags);
-      free (path);
+      /* Side effects: possibly sets file_to_lose_on. */
+      full_path = find_in_path_element (name, cands[path_index], flags, name_len, &dotinfo, &rflags, 0);
 
       /* We use the file status flag bits to check whether full_path is a
 	 directory, which we reject here. */
@@ -676,9 +655,12 @@ find_user_command_in_path (const char *name, char *path_list, int flags, int *rf
 	  if (rflagsp)
 	    *rflagsp = rflags;
 	  FREE (file_to_lose_on);
+	  strvec_dispose (cands);
 	  return (full_path);
 	}
     }
+  if (cands)
+    strvec_dispose (cands);
 
   /* We didn't find exactly what the user was looking for.  Return
      the contents of FILE_TO_LOSE_ON which is NULL when the search

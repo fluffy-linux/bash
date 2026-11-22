@@ -403,6 +403,61 @@ GLOBIGNORE=
 expect '<man/man1/bash.1>'
 recho */man*/bash.*
 
+# test wildcard PATH expansion and GLOB_PATHS ordering
+OPATH=$PATH
+mkdir -p z_first/bin m_wild/pkg_b/bin m_wild/pkg_a/bin a_last/bin
+for d in z_first/bin m_wild/pkg_b/bin m_wild/pkg_a/bin a_last/bin; do
+	touch "$d/myprog"
+	chmod +x "$d/myprog"
+done
+PATH="z_first/bin:m_wild/*/bin:a_last/bin"
+type -P myprog
+type -a -p myprog
+PATH=$OPATH
+
+# Tilde expansion in PATH inserts $HOME as it is: a search-list element is
+# literal apart from a whole "*" component, so brackets need no escaping.
+OHOME=$HOME
+export -n HOME
+HOME="$PWD/h[1]dir"
+mkdir -p "$HOME/bin" "$HOME/pkgs/p1/bin"
+touch "$HOME/bin/fluffytilde_prog" "$HOME/pkgs/p1/bin/fluffytilde_wild"
+chmod +x "$HOME/bin/fluffytilde_prog" "$HOME/pkgs/p1/bin/fluffytilde_wild"
+PATH="~/bin:~/*/p1/bin"
+type -P fluffytilde_prog >/dev/null && echo ok tilde 1
+type -P fluffytilde_wild >/dev/null && echo ok tilde 2
+tilde_cg=$(compgen -c fluffytilde_)
+PATH=$OPATH
+printf '%s\n' "$tilde_cg" | LC_ALL=C sort
+HOME=$OHOME
+export HOME
+
+# Only a whole "*" component is a wildcard in a search list (glibc
+# GLOB_PATHS, as in execvp): brackets, extglob, and case folding do not
+# apply, so the first three elements name directories that do not exist.
+shopt -s extglob nocaseglob
+PATH="m_wild/[p]kg_b/bin:m_wild/@(pkg_b)/bin:M_WILD/*/bin:m_wild/*/bin"
+type -P myprog
+shopt -u extglob nocaseglob
+PATH=$OPATH
+
+# A file that is not executable is passed over, as execvp passes over it,
+# and every match is listed, however many elements match.
+mkdir -p noexec/bin
+touch noexec/bin/myprog
+PATH="noexec/bin:m_wild/*/bin"
+type -P myprog
+type -a -p myprog
+PATH=$OPATH
+for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
+	mkdir -p many/$i/bin
+	touch many/$i/bin/myprog
+	chmod +x many/$i/bin/myprog
+done
+PATH="many/*/bin"
+type -a -p myprog
+PATH=$OPATH
+
 # this is for the benefit of pure coverage, so it writes the pcv file
 # in the right place, and for gprof
 builtin cd $MYDIR
